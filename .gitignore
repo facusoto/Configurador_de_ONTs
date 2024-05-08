@@ -1,0 +1,8 @@
+venv/
+.idea/
+__pycache__/
+keys.json
+config.json
+registros.csv
+Registros_viejos_serie_A.csv
+Registros_viejos_serie_C.csv
