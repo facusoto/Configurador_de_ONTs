@@ -1,68 +1,60 @@
 from netmiko import ConnectHandler
-from netmiko.exceptions import NetmikoTimeoutException, ReadTimeout
+from netmiko.exceptions import NetmikoTimeoutException, NetmikoAuthenticationException
 from re import search
-
-#  Setear la contrasena del modem
-designed_ONT_password = 'Rr2023Fa'
+from .record_utilities import model_mapping
 
 
-#  Obtener la Gpon y MAC
-def get_gpon_and_mac(gpon: str, mac: str) -> list:
-    """
-    Función que toma una cadena que representa una GPON y una dirección MAC,
-    Elimina caracteres específicos de la cadena GPON y la formatea en función de determinadas condiciones,
-    Elimina caracteres específicos de la MAC y devuelve una lista con las direcciones GPON y MAC modificadas.
-    """
+def verify_model(password: str, command: str = 'show device_model'):
+    # Define los parámetros de conexión SSH
+    device = {
+        'device_type': 'generic',
+        'host': '192.168.1.1',
+        'username': 'admin',
+        'password': password,
+    }
 
-    # Elimina los '-' del texto de la Gpon
-    gpon = f"{gpon.upper().replace('-', '')}"
+    while True:
+        try:
+            # Crea una conexión SSH
+            connection = ConnectHandler(**device)
+            output = ''
 
-    # Formatea las cadenas de texto de manera más clara
-    if "46414D41" in gpon:
-        gpon = [[f"{gpon.replace('46414D41', 'FAMA')}"]]
-    elif "41534B59" in gpon:
-        gpon = [[f"{gpon.replace('41534B59', 'ASKY')}"]]
-    elif "4D535443" in gpon:
-        gpon = [[f"{gpon.replace('4D535443', 'MSTC')}"]]
-    else:
-        raise ValueError('Error')
+            # Ejecuta un comando en el dispositivo remoto
+            try:
+                output = connection.send_command(command)
+            except NetmikoTimeoutException as e:
+                # Verificar si la excepción realmente corresponde a un timeout
+                if "Pattern not detected" in str(e):
+                    # Manejar el caso específico de patrón no detectado
+                    print("Patrón no detectado en la salida del dispositivo.")
+                else:
+                    # Manejar otros casos de timeout
+                    print("Se ha producido un tiempo de espera en la conexión.")
+                    # Puedes agregar más lógica según sea necesario para manejar otros casos de timeout
+            except Exception as e:
+                # Manejar otros tipos de excepciones
+                output = connection.send_command(command, strip_prompt=False)
 
-    # Elimina los ':' del texto de la MAC
-    mac = [[f"{mac.upper().replace(':', '')}"]]
+            for key in model_mapping.keys():
+                if key in output:
+                    output = model_mapping[key][0]
+                    break
+            else:
+                print('Error: No se encontró una clave válida en el output')
+                continue
 
-    return [gpon, mac]
+            # Cierra la conexión
+            connection.disconnect()
 
+            return output
 
-#  Realiza la prueba de la rx_power
-def rx_power_report(rx_power: int):
+        except NetmikoTimeoutException:
+            print("Error: no se pudo establecer la conexión SSH con el dispositivo.")
+            continue
 
-    """
-    Una función para informar sobre el nivel de potencia de un módem.
-
-    Args:
-        rx_power (int): El nivel de rx_power del módem.
-
-    Returns:
-        None
-    """
-
-    if rx_power == 0:
-        print("¡Modem sin potencia, límpialo o revisa la conexión!")
-    else:
-        # Evalúa y muestra el estado de la potencia
-        if rx_power >= 245:
-            potencia_msg = "Mala potencia"
-        elif 220 < rx_power < 245:
-            potencia_msg = "Buena potencia"
-        elif 160 <= rx_power <= 220:
-            potencia_msg = "Excelente potencia"
-        else:
-            potencia_msg = "Potencia desconocida"
-
-        # Imprime el mensaje de potencia
-        print(f"Potencia: {rx_power} - {potencia_msg}")
-        # Se imprime que se obtuvieron los datos solo si pasa la prueba de la potencia
-        print("¡Datos de modem obtenidos!")
+        except NetmikoAuthenticationException:
+            print("Error: el usuario y la contraseña son incorrectos.")
+            break
 
 
 # Función para cambiar el SSID y contraseña
@@ -140,6 +132,3 @@ def wifi_config_ssh(ONT_password: str, access_password: str, ssid: str, plus: st
         except NetmikoTimeoutException:
             print("Error: no se pudo establecer la conexión SSH con el dispositivo.")
             continue
-
-if __name__ == "__main__":
-    wifi_config_ssh(ONT_password='4FbwHbQy', access_password='263553213213352', ssid='para_probar')

@@ -1,6 +1,7 @@
 import time
 from random import randint
-from .shared_functions import get_gpon_and_mac, rx_power_report, designed_ONT_password
+from .raw_data_handler import get_gpon_and_mac, rx_power_report
+from ..utils.company_info import designed_ONT_password
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -47,11 +48,7 @@ class Init8115:
         self.wifi_5g = wifi_5g
         self.existing_randomly_password = existing_randomly_password
 
-        # Configuración de datos obtenidos
-        self.gpon = None
-        self.mac = None
-        self.rx_power = None
-        self.output_pass = None
+        # Configuración de una contraseña aleatoria
         self.random_password = existing_randomly_password if self.existing_randomly_password is not None else randint(10000000, 99999999)
 
     def get_data(self):
@@ -75,34 +72,34 @@ class Init8115:
             mac_element = driver.find_element_by_xpath('//*[@id="tdMac"]').text
 
             # Formatea el gpon y la mac
-            self.gpon, self.mac = get_gpon_and_mac(gpon=gpon_element, mac=mac_element)
+            gpon, mac = get_gpon_and_mac(gpon=gpon_element, mac=mac_element)
 
             # Setear valores para ciclo que obtenga un valor correcto de rx_power
-            sin_potencia = "--- dBm"
+            no_power = "--- dBm"
             max_intentos = 5
             intentos = 0
 
             # Evita los errores de lectura de rx_power probando varias veces
             while intentos < max_intentos:
                 # Obtener valor de rx_power
-                potencia_element = driver.find_element_by_xpath('//*[@id="tdRx"]').text
+                rx_power_element = driver.find_element_by_xpath('//*[@id="tdRx"]').text
 
                 # Obtiene el valor de rx_power
-                if potencia_element != sin_potencia:
-                    self.rx_power = int(''.join(filter(str.isdigit, potencia_element))[:3])
+                if rx_power_element != no_power:
+                    rx_power = int(''.join(filter(str.isdigit, rx_power_element))[:3])
                     break
                 else:
                     intentos += 1
                     driver.refresh()
 
             # Si no se obtuvo la rx_power (y, por lo tanto, continúa en None) la establece en 0
-            if self.rx_power is None:
-                self.rx_power = 220
+            if rx_power is None:
+                rx_power = 0
 
             # Hace un reporte de la rx_power
-            rx_power_report(self.rx_power)
+            device_status = rx_power_report(rx_power)
 
-            return self.gpon, self.mac, self.rx_power
+            return gpon, mac, device_status
 
         except TimeoutException:
             print("No se pudo acceder y obtener los datos")

@@ -1,7 +1,8 @@
 import time
 from time import sleep
 from random import randint
-from .shared_functions import get_gpon_and_mac, rx_power_report, designed_ONT_password
+from .raw_data_handler import get_gpon_and_mac, rx_power_report
+from ..utils.company_info import designed_ONT_password
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -49,11 +50,7 @@ class Init2541:
         self.wifi_5g = wifi_5g
         self.existing_randomly_password = existing_randomly_password
 
-        # Configuración de datos obtenidos
-        self.gpon = None
-        self.mac = None
-        self.rx_power = None
-        self.output_pass = None
+        # Configuración de una contraseña aleatoria
         self.random_password = existing_randomly_password if self.existing_randomly_password is not None else randint(10000000, 99999999)
 
     def get_data(self):
@@ -85,7 +82,7 @@ class Init2541:
         # Variables a utilizar
         gpon_element = ''
         mac_element = ''
-        potencia_element = ''
+        rx_power_element = ''
 
         # Verificar si la URL ha cambiado debido a la contraseña incorrecta
         if "logIn_mhs_pw_error.html" in driver.current_url:
@@ -97,27 +94,27 @@ class Init2541:
                 # Obtén los elementos modelo 1
                 gpon_element = driver.find_element_by_xpath('//*[@id="gsn"]').text
                 mac_element = driver.find_element_by_xpath('//*[@class="FLOATBOX"][1]//div[9]/span').text
-                potencia_element = driver.find_element_by_xpath('//*[@class="FLOATBOX"][3]//div[3]/span[1]').text
+                rx_power_element = driver.find_element_by_xpath('//*[@class="FLOATBOX"][3]//div[3]/span[1]').text
 
             except NoSuchElementException:
                 # Obtén los elementos modelo 2
                 gpon_element = driver.find_element_by_xpath('//*[@id="gsn"]').text
                 mac_element = driver.find_element_by_xpath('/html/body/div/div[1]/div[5]/div[3]/div[2]/div[9]').text
-                potencia_element = driver.find_element_by_xpath('/html/body/div/div[1]/div[7]/div[2]/div[3]/span[1]').text
+                rx_power_element = driver.find_element_by_xpath('/html/body/div/div[1]/div[7]/div[2]/div[3]/span[1]').text
 
             except TimeoutException:
                 print("No se pudo acceder y obtener los datos")
 
             # Formatea el gpon y la mac
-            self.gpon, self.mac = get_gpon_and_mac(gpon=gpon_element, mac=mac_element)
+            gpon, mac = get_gpon_and_mac(gpon=gpon_element, mac=mac_element)
 
             # Obtiene el valor de rx_power
-            self.rx_power = int(''.join(filter(str.isdigit, potencia_element))[:3])
+            rx_power = int(''.join(filter(str.isdigit, rx_power_element))[:3])
 
             # Hace un reporte de la rx_power
-            rx_power_report(self.rx_power)
+            device_status = rx_power_report(rx_power)
 
-            return self.gpon, self.mac, self.rx_power
+            return gpon, mac, device_status
 
     def config_panel_access(self):
         # Ingreso a la página 192.168.1.1:8000

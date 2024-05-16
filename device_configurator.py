@@ -1,4 +1,5 @@
 from datetime import datetime
+from utils.company_info import company_name
 from utils.globals_records import column_mapping
 from utils.google_utilities import google_sheets_worker, update_cell
 from utils.smart_olt_utilities import SmartOLT
@@ -55,8 +56,8 @@ def device_configurator(
 
     # Definir valores del módem
     record_number = f"{record.upper()}{device_number}"
-    wifi_2g = record_number + "_FibrAzul"
-    wifi_5g = record_number + "_FibrAzul_5Ghz"
+    wifi_2g = record_number + f"_{company_name}"
+    wifi_5g = record_number + f"_{company_name}_5Ghz"
 
     # Crear un diccionario para mapear modelos a sus detalles
     model_paramethers = {
@@ -123,7 +124,7 @@ def device_configurator(
             sn, mac, rx_power = raw_data
 
             # Ejecutar el programa si la rx_power está dentro de un intervalo aceptable
-            if 0 < rx_power < 245:
+            if rx_power:
 
                 # Almacenar datos en Google Sheets
                 # Agregar la información de ONT si es reconfigurado
@@ -166,7 +167,7 @@ def device_configurator(
                 configurator.kill()
 
             else:
-                print("Proceso interrumpido: rx_power del modem demasiado alta, por favor limpia el modem y vuelve a intentarlo.")
+                print("Proceso interrumpido: La potencia del modem es demasiado alta, por favor limpia el modem y vuelve a intentarlo.")
     else:
         print("Modelo no válido, ¿Cómo llegaste hasta acá?")
 

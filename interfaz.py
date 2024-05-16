@@ -6,8 +6,8 @@ from device_configurator import device_configurator
 from utils.globals_records import record_id, column_mapping
 from utils.google_utilities import google_sheets_worker
 from utils.input_utilities import number_of_devices, set_record, set_first_modem
-from utils.get_model_utilities import verify_model
 from utils.record_utilities import read_records, get_passwords_for_reconfigured_devices
+from utils.ssh_utilities import verify_model
 
 
 # Realizar preguntas y setear intervalos

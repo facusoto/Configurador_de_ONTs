@@ -15,7 +15,7 @@ def load_configuration():
 
 # Identifica el tipo de modelo en SmartOLT
 def get_proper_ONT_name(model: int):
-    model_name = next((val[1] for key, val in model_mapping.items() if val[0] == model), None)
+    model_name = next((val[1] for val in model_mapping.values() if val[0] == model), None)
 
     if model_name is not None:
         return model_name
